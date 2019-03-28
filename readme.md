@@ -1,61 +1,71 @@
-These instructions work under 
-mac os x - terminal
-windows - powershell
+
+# Biomedical Image Processing with Containers and Deep Learning: An Automated Analysis Pipeline #
+
+This git repository functions as example code to demonstrate the concepts defined into the paper with the above-mentioned title. 
+
+We have generated a sample problem of finding circles in images. 
+* The script generate_data.py will generate the phantom images that are going to be used for the sample problem. 
+* The script pipeline.py analyzes the images to detect the circles on such images, stores their coordinates into a csv file and generates quality control images. 
+* The Jupyter notebook analyzed_data.ipynb reads the csv file and plots histograms of the generated datasets.
+
+We are going to execute all scripts using Docker, to isolate the configuration of the project from your base system. Towards that end, you should have Docker installed on your computer. You can find instructions on how to install Docker on Mac or Windows at [Docker Desktop](https://www.docker.com/products/docker-desktop). For Linux installation you can use the packages provided by your distribution or use the script file under installation_scripts/docker-install_linux.sh
 
 
-## Step zero - stablish a data structure and stick to it
+## Docker processing demo ##
+
+Once Docker has been installed, let's generate the container required for the image processing pipeline
+`docker build -t bioessays2018/processing Processing_Image/`
+
+Once the Docker system has finished downloading the images and installing the requirements.txt for the python system, we are able to process and generate the data:
+
+`docker run --rm -v $(PWD):/usr/src/app bioessays2018/processing python generate_data.py`
+
+After this, we can process the data using the pipeline:
+`docker run --rm -v $(PWD):/usr/src/app bioessays2018/processing python pipeline.py`
+
+
+And now we can look at the results:
+`docker run -it -p 8888:8888 -v $(PWD):/home/jovyan jupyter/scipy-notebook`
+
+After the latest command is run, we can access the notebook from a web browser within the same computer by going to the url
+`http://127.0.0.1:8888/?token=<token_you_are_assigned>`
+
+And analyze the data by using the notebook analyze_data.ipynb
+
+
+# Principles used in this demo #
+
+## Step one - stablish a data structure and stick to it
 For the proof of concept we are going to count the average intensity in circles in the image. The images will be automatically generated.
-In this case we are going to simulate the data and store it in the format date/subject/experiment/image.png
-The data will be stored in a temporal folder defined by the user
-
-pip install virtualenv
-python /Users/sierratech/.local/lib/python3.6/site-packages/virtualenv.py my_project
-source my_project/bin/activate
-pip install numpy
-pip install scikit-image
-pip install jupyter
-pip install pandas
+In this case we are going to simulate the data and store it in the format data/acquisitions/date/subject/experiment/image.png
 
 
-## Step one - generate your processing pipeline.
-We can see the processing of an image in the following notebook.
-This is often done in the desktop of the scientist with a subset of the data
-We have generated pipeline.py
+## Step two - generate a processing pipeline ##
+We have set it up into the file pipeline.py . It performs three operations:
+* Loop through the acquired images and detect circles on them if they are not previously detected
+* Loop through the images and generate quality control images if they have not yet been generated
+* Aggregate all circles from all images into a single CSV file
 
-## Step two - generate the virtual environment where it rune
-pip freeze > requirements.txt
-
-## Step three - dockerize the environment
-- Install Docker
--- If using windows - Switch Docker to use linux containers from the context menu of the docker icon
-- Create a Dockerfile (set of instructions for docker so that it can create an operating system where to run the code)
-- Build the image
-docker build -t evanslab/python_demo  .
-- You can test the environment using docker run -it pnp /bin/bash
-docker run -it --rm --name bash_test  -v ${PWD}:/usr/src/myapp -w /usr/src/myapp evanslab/python_demo /bin/bash
-
-- Now you are ready to run the pipeline anywhere with the following command
-docker run -it --rm --name pipeline_test  -v ${PWD}:/usr/src/myapp -w /usr/src/myapp evanslab/python_demo python pipeline.py
-
-- Optional - upload the image to Dockerhub
-docker login
-docker push evasnlab/python_demo
-
-## Step four - set up overnight processing
-- Edit the crontab file of the system. Such is done by invoking the following command:
-sudo crontab -e
-- Add the following line - the code will be run at 2 am every day - this runs on mac os x and linux. 
-# m h  dom mon dow   command
-0 2 * * * docker run -it --rm --name test  -v <path_where_code_resides>:/usr/src/myapp -w /usr/src/myapp evanslab/python_demo python pipeline.py
-
-## Step five - inspect the data and draw conclusions
-- Launch a jupyter notebook with the same configuration as before
-docker run -it --rm --name jupyter_test  -p 8888:8888 -v ${PWD}:/usr/src/myapp -w /usr/src/myapp evanslab/python_demo jupyter notebook --no-browser --ip=0.0.0.0 --allow-root
-- Open a browser and point it to (replace the xxxx with the token resulting from the given name)
-http://127.0.0.1:8888/?token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+## Step three - inspect the data and draw conclusions ##
+We have done it through the jupyter notebook. In this case we can see that ...
 
 
-## Step seven (advanced) - run in a cluster - kubernetes
+## Step Four ##
+If the images are regularly acquired, then set up automated processing. This can be done on linux systems by using the cron system. Cron reads a file named crontab, which tells him what to do at what times. Such file is editted by invoking the following command: `sudo crontab -e`
+
+Add the following line - the code will be run at 2 am every day 
+`# m h  dom mon dow   command
+0 2 * * * docker run --rm -v $(PWD):/usr/src/app bioessays2018/processing python pipeline.py`
+
+
+## Step five (advanced) - run in a cluster - kubernetes ##
+Indications are given into the installation_scripts folder.
+
+
+
+
+
+
 
 
 ## Note on windows shared folders
